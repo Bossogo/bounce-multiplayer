@@ -27,9 +27,10 @@ export class NetClient {
 
   private candidateUrls(): string[] {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const urls = [`${protocol}//${location.host}/ws`];
+    const urls = [`${protocol}//${location.host}/api/ws`];
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-      urls.push('ws://localhost:3001/ws');
+      urls.push(`${protocol}//${location.host}/ws`);
+      urls.push('ws://localhost:3001/api/ws');
     }
     return [...new Set(urls)];
   }

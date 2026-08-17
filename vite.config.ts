@@ -8,9 +8,14 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
+        '/api/ws': {
+          target: `ws://localhost:${wsPort}`,
+          ws: true,
+        },
         '/ws': {
           target: `ws://localhost:${wsPort}`,
           ws: true,
+          rewrite: () => '/api/ws',
         },
       },
     },

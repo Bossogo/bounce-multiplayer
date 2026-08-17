@@ -18,13 +18,14 @@ Open [http://localhost:5173](http://localhost:5173).
 ## Stack
 
 - Vite + TypeScript client (canvas split view)
-- Node WebSocket server (`/ws`) with authoritative simulation
+- Node WebSocket server (`/api/ws`) with authoritative simulation
 - Shared protocol + physics in `shared/`
+- Vercel Fluid Compute WebSockets + Upstash Redis for cross-instance rooms
 
 ## Scripts
 
 | Command        | Purpose                                      |
 |----------------|----------------------------------------------|
-| `pnpm dev`     | WS server + Vite client (proxied `/ws`)      |
+| `pnpm dev`     | WS server + Vite client (proxied `/api/ws`)  |
 | `pnpm build`   | Production client build to `dist/`           |
 | `pnpm start`   | WS server (serves `dist/` when present)      |

@@ -2,8 +2,9 @@ node_modules
 dist
 .DS_Store
 *.local
+.pnpm-store
+package.json.tmp
+.vercel
 .env
 .env.*
 !.env.example
-.pnpm-store
-package.json.tmp
