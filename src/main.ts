@@ -30,7 +30,7 @@ function mountPlayfield(): void {
     <div class="play-root">
       <canvas id="game"></canvas>
       <div class="hud">
-        <div class="code" id="hud-code">SPLIT SCREEN</div>
+        <div class="code" id="hud-code">YOU VS CPU</div>
         <div class="scores">
           <span class="p1" id="score-p1">Left 0</span>
           <span class="p2" id="score-p2">Right 0</span>
@@ -50,12 +50,9 @@ function mountPlayfield(): void {
   canvas.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     if (mode === 'attract' || snapshot.phase === 'finished') return;
-    const pane = renderer?.hitTestPane(event.clientX, event.clientY);
     if (mode === 'local') {
-      if (pane) {
-        local.bounce(pane);
-        renderer?.pulse();
-      }
+      local.bounce('p1');
+      renderer?.pulse();
       return;
     }
     if (snapshot.phase === 'playing') {
@@ -78,17 +75,7 @@ function mountPlayfield(): void {
           renderer?.pulse();
         }
       }
-      if (event.code === 'ArrowUp' || event.code === 'ArrowRight' || event.code === 'KeyP') {
-        event.preventDefault();
-        if (mode === 'local') {
-          local.bounce('p2');
-          renderer?.pulse();
-        } else if (snapshot.phase === 'playing' && you) {
-          net.send({ type: 'bounce' });
-          renderer?.pulse();
-        }
-      }
-      if (event.code === 'Space') {
+      if (event.code === 'ArrowUp' || event.code === 'Space') {
         event.preventDefault();
         if (mode === 'local') {
           local.bounce('p1');
@@ -153,7 +140,7 @@ function renderMenu(): void {
   menu.innerHTML = `
     <div class="panel glass">
       <h1 class="brand">BOUNCE</h1>
-      <p class="tagline">Split-screen climb. Click your half to bounce. Time the gaps. Or share a four-digit code.</p>
+      <p class="tagline">Split-screen climb. Click to bounce against the CPU. Time the gaps. Or share a four-digit code.</p>
       <div class="actions">
         <button type="button" id="play-btn">Play on this screen</button>
         <button type="button" class="secondary" id="create-btn">Create room</button>
@@ -163,7 +150,7 @@ function renderMenu(): void {
         <button type="button" class="secondary" id="join-btn">Join</button>
       </div>
       <p class="error">${errorText}</p>
-      <p class="hint">Same computer: click the left or right half. Two browsers: create a room and share the code.</p>
+      <p class="hint">Same computer: you vs CPU. Two browsers: create a room and share the code.</p>
     </div>
   `;
 
@@ -228,7 +215,7 @@ function updateHud(): void {
   if (s2 && p2) s2.textContent = `${p2.name} ${p2.score}`;
   if (code) {
     code.textContent =
-      mode === 'online' ? `CODE ${snapshot.code}` : 'SPLIT SCREEN';
+      mode === 'online' ? `CODE ${snapshot.code}` : 'YOU VS CPU';
   }
 }
 
@@ -254,7 +241,7 @@ function updateOverlay(): void {
     lastOverlayKey = key;
     overlay.hidden = false;
     overlay.className = 'overlay';
-    overlay.innerHTML = `<div class="stack"><h2>${n}</h2><p>${mode === 'local' ? 'Left click · Right click' : 'Click to bounce — miss the bars'}</p></div>`;
+    overlay.innerHTML = `<div class="stack"><h2>${n}</h2><p>${mode === 'local' ? 'Click or Space to bounce — beat the CPU' : 'Click to bounce — miss the bars'}</p></div>`;
     return;
   }
 

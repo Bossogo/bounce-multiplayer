@@ -11,7 +11,7 @@ pnpm dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-- **Play on this screen** — split view, click the left or right half (or W / ↑)
+- **Play on this screen** — you vs CPU, click or press Space / ↑ to bounce
 - **Create room** — share the four-digit code in a second browser
 - Last player alive wins; if both crash, highest climb score wins
 

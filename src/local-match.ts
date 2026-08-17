@@ -5,7 +5,9 @@ import {
   PLAYER_RADIUS,
   TICK_RATE,
   type GameSnapshot,
+  type ObstacleState,
   type PlayerId,
+  type PlayerState,
 } from '../shared/protocol';
 import {
   applyBounce,
@@ -20,7 +22,9 @@ export class LocalMatch {
   snapshot: GameSnapshot;
   private pending = new Set<PlayerId>();
   private auto = false;
+  private cpu: PlayerId | null = null;
   private autoAcc: Record<PlayerId, number> = { p1: 0, p2: 0 };
+  private cpuCooldown = 0;
 
   constructor() {
     this.snapshot = this.fresh('LOCAL');
@@ -28,12 +32,15 @@ export class LocalMatch {
 
   startPlay(): void {
     this.auto = false;
+    this.cpu = 'p2';
+    this.cpuCooldown = 0;
     this.snapshot = this.fresh('LOCAL');
     this.beginCountdown();
   }
 
   startAttract(): void {
     this.auto = true;
+    this.cpu = null;
     this.snapshot = this.fresh('DEMO');
     this.beginCountdown();
   }
@@ -44,6 +51,7 @@ export class LocalMatch {
 
   bounce(id: PlayerId): void {
     if (this.auto) return;
+    if (this.cpu === id) return;
     if (this.snapshot.phase === 'playing') this.pending.add(id);
   }
 
@@ -65,9 +73,9 @@ export class LocalMatch {
     if (snap.phase !== 'playing') return;
 
     if (this.auto) this.autoBounce(dt);
+    else if (this.cpu) this.cpuThink(dt);
 
     const tick = 1 / TICK_RATE;
-    // dt can be larger than a tick; step in fixed slices
     let remain = Math.min(dt, 0.05);
     while (remain > 0) {
       const slice = Math.min(tick, remain);
@@ -106,7 +114,9 @@ export class LocalMatch {
   }
 
   private fresh(code: string): GameSnapshot {
-    return createMatchSnapshot(code, { p1: 'Left', p2: 'Right' });
+    const names =
+      code === 'LOCAL' ? { p1: 'You', p2: 'CPU' } : { p1: 'Left', p2: 'Right' };
+    return createMatchSnapshot(code, names);
   }
 
   private autoBounce(dt: number): void {
@@ -120,4 +130,52 @@ export class LocalMatch {
       }
     }
   }
+
+  private cpuThink(dt: number): void {
+    this.cpuCooldown = Math.max(0, this.cpuCooldown - dt);
+    if (this.cpuCooldown > 0 || !this.cpu) return;
+
+    const me = this.snapshot.players.find((p) => p.id === this.cpu);
+    if (!me?.alive) return;
+
+    const floor = FLOOR_Y - PLAYER_RADIUS;
+    const floorThreat = me.vy > 120 && me.y > floor - 110;
+    const diesCoast = diesWithin(me, this.snapshot.obstacles, 0.32, false);
+    const diesBounce = diesWithin(me, this.snapshot.obstacles, 0.32, true);
+    const climbOpen = !diesBounce && me.vy > 90;
+
+    let shouldBounce = false;
+    if (floorThreat) shouldBounce = true;
+    else if (diesCoast && !diesBounce) shouldBounce = true;
+    else if (diesCoast && me.vy > 40) shouldBounce = true;
+    else if (climbOpen) shouldBounce = true;
+
+    if (!shouldBounce) return;
+    if (Math.random() < 0.12) {
+      this.cpuCooldown = 0.08;
+      return;
+    }
+
+    this.pending.add(this.cpu);
+    this.cpuCooldown = 0.16 + Math.random() * 0.12;
+  }
+}
+
+function diesWithin(
+  player: PlayerState,
+  obstacles: ObstacleState[],
+  seconds: number,
+  bounceFirst: boolean,
+): boolean {
+  const ghost: PlayerState = { ...player };
+  const bars = obstacles.map((o) => ({ ...o }));
+  if (bounceFirst) applyBounce(ghost);
+  const step = 1 / TICK_RATE;
+  for (let t = 0; t < seconds; t += step) {
+    stepPlayer(ghost, step, { floorLethal: true });
+    stepObstacles(bars, step);
+    resolveCollisions([ghost], bars);
+    if (!ghost.alive) return true;
+  }
+  return false;
 }
