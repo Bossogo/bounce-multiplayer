@@ -25,6 +25,31 @@ function setError(message: string): void {
   if (el) el.textContent = message;
 }
 
+function selfId(): PlayerId {
+  if (mode === 'local') return 'p1';
+  return you ?? 'p1';
+}
+
+function resultTitle(): string {
+  if (!snapshot.winnerId) return 'Draw';
+  return snapshot.winnerId === selfId() ? 'You win' : 'You lose';
+}
+
+function tryBounce(): void {
+  if (mode === 'attract' || snapshot.phase === 'finished') return;
+  if (mode === 'local') return;
+  if (snapshot.phase === 'playing' || snapshot.phase === 'countdown') {
+    net.send({ type: 'bounce' });
+    renderer?.pulse();
+  }
+}
+
+function localBounce(id: PlayerId): void {
+  if (mode !== 'local' || snapshot.phase === 'finished') return;
+  local.bounce(id);
+  renderer?.pulse();
+}
+
 function mountPlayfield(): void {
   app.innerHTML = `
     <div class="play-root">
@@ -51,39 +76,31 @@ function mountPlayfield(): void {
     event.preventDefault();
     if (mode === 'attract' || snapshot.phase === 'finished') return;
     if (mode === 'local') {
-      local.bounce('p1');
-      renderer?.pulse();
+      const pane = renderer?.hitTestPane(event.clientX, event.clientY) ?? 'p1';
+      localBounce(pane);
       return;
     }
-    if (snapshot.phase === 'playing') {
-      net.send({ type: 'bounce' });
-      renderer?.pulse();
-    }
+    tryBounce();
   });
 
   window.addEventListener(
     'keydown',
     (event) => {
-      if (mode === 'attract') return;
+      if (mode === 'attract' || snapshot.phase === 'finished') return;
       if (event.code === 'KeyA' || event.code === 'KeyW' || event.code === 'KeyQ') {
         event.preventDefault();
-        if (mode === 'local') {
-          local.bounce('p1');
-          renderer?.pulse();
-        } else if (snapshot.phase === 'playing') {
-          net.send({ type: 'bounce' });
-          renderer?.pulse();
-        }
+        if (mode === 'local') localBounce('p1');
+        else tryBounce();
       }
-      if (event.code === 'ArrowUp' || event.code === 'Space') {
+      if (event.code === 'ArrowUp' || event.code === 'ArrowRight' || event.code === 'KeyP') {
         event.preventDefault();
-        if (mode === 'local') {
-          local.bounce('p1');
-          renderer?.pulse();
-        } else if (snapshot.phase === 'playing') {
-          net.send({ type: 'bounce' });
-          renderer?.pulse();
-        }
+        if (mode === 'local') localBounce('p2');
+        else tryBounce();
+      }
+      if (event.code === 'Space') {
+        event.preventDefault();
+        if (mode === 'local') localBounce('p1');
+        else tryBounce();
       }
     },
     { passive: false },
@@ -241,7 +258,7 @@ function updateOverlay(): void {
     lastOverlayKey = key;
     overlay.hidden = false;
     overlay.className = 'overlay';
-    overlay.innerHTML = `<div class="stack"><h2>${n}</h2><p>${mode === 'local' ? 'Click or Space to bounce — beat the CPU' : 'Click to bounce — miss the bars'}</p></div>`;
+    overlay.innerHTML = `<div class="stack"><h2>${n}</h2><p>${mode === 'local' ? 'Click your half to bounce' : 'Click to bounce — miss the bars'}</p></div>`;
     return;
   }
 
@@ -251,8 +268,7 @@ function updateOverlay(): void {
     lastOverlayKey = key;
     overlay.hidden = false;
     overlay.className = 'overlay interactive';
-    const winner = snapshot.players.find((p) => p.id === snapshot.winnerId);
-    const title = winner ? `${winner.name} wins!` : 'Draw';
+    const title = resultTitle();
     overlay.innerHTML = `
       <div class="stack">
         <h2>${title}</h2>

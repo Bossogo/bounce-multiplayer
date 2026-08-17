@@ -139,7 +139,11 @@ export class GameHub {
     if (!record) return;
 
     if (msg.type === 'bounce') {
-      if (record.snapshot.phase === 'playing' && !record.pendingBounce.includes(id)) {
+      if (
+        (record.snapshot.phase === 'playing' ||
+          record.snapshot.phase === 'countdown') &&
+        !record.pendingBounce.includes(id)
+      ) {
         record.pendingBounce.push(id);
         await this.store.set(code, record);
       }
@@ -274,6 +278,11 @@ function stepRecord(record: RoomRecord, dt: number): void {
         player.y = FLOOR_Y - PLAYER_RADIUS - 8;
         player.vy = BOUNCE_VELOCITY * 0.55;
       }
+      for (const id of record.pendingBounce) {
+        const player = snap.players.find((p) => p.id === id);
+        if (player) applyBounce(player);
+      }
+      record.pendingBounce = [];
     }
     return;
   }

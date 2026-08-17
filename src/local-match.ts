@@ -51,8 +51,13 @@ export class LocalMatch {
 
   bounce(id: PlayerId): void {
     if (this.auto) return;
-    if (this.cpu === id) return;
-    if (this.snapshot.phase === 'playing') this.pending.add(id);
+    if (this.cpu === id) this.cpu = null;
+    if (
+      this.snapshot.phase === 'playing' ||
+      this.snapshot.phase === 'countdown'
+    ) {
+      this.pending.add(id);
+    }
   }
 
   step(dt: number): void {
@@ -66,6 +71,11 @@ export class LocalMatch {
           player.y = FLOOR_Y - PLAYER_RADIUS - 8;
           player.vy = BOUNCE_VELOCITY * 0.55;
         }
+        for (const id of this.pending) {
+          const player = snap.players.find((p) => p.id === id);
+          if (player) applyBounce(player);
+        }
+        this.pending.clear();
       }
       return;
     }
