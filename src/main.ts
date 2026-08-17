@@ -49,7 +49,7 @@ function mountPlayfield(): void {
 
   canvas.addEventListener('pointerdown', (event) => {
     event.preventDefault();
-    if (mode === 'attract') return;
+    if (mode === 'attract' || snapshot.phase === 'finished') return;
     const pane = renderer?.hitTestPane(event.clientX, event.clientY);
     if (mode === 'local') {
       if (pane) {
@@ -274,16 +274,19 @@ function updateOverlay(): void {
         <button type="button" class="secondary" id="home-btn">Menu</button>
       </div>
     `;
-    document.querySelector('#rematch-btn')?.addEventListener('click', () => {
+    document.querySelector('#rematch-btn')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      lastOverlayKey = '';
       if (mode === 'local') {
         local.rematch();
         snapshot = local.snapshot;
-        lastOverlayKey = '';
+        updateOverlay();
       } else {
         net.send({ type: 'rematch' });
       }
     });
-    document.querySelector('#home-btn')?.addEventListener('click', () => {
+    document.querySelector('#home-btn')?.addEventListener('click', (event) => {
+      event.stopPropagation();
       mode = 'attract';
       you = null;
       lastOverlayKey = '';
@@ -291,6 +294,7 @@ function updateOverlay(): void {
       snapshot = local.snapshot;
       renderMenu();
       updateHud();
+      updateOverlay();
     });
     return;
   }

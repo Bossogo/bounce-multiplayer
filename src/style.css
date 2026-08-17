@@ -353,6 +353,15 @@ canvas {
   opacity: 0.9;
 }
 
+.overlay.interactive {
+  pointer-events: auto;
+  background: rgba(8, 36, 34, 0.55);
+}
+
+.overlay.interactive button {
+  pointer-events: auto;
+}
+
 .overlay[hidden] {
   display: none !important;
 }
